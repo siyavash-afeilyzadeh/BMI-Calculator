@@ -34,5 +34,5 @@ public class UserProfile {
 
     @Builder.Default
     @OneToMany(mappedBy = "userProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<MeasurementEntry> measurments = new ArrayList<>();
+    private List<MeasurementEntry> measurements = new ArrayList<>();
 }
