@@ -3,142 +3,204 @@ package com.black.bmitracker.ui;
 import com.black.bmitracker.domain.dto.BmiResultDto;
 import com.black.bmitracker.domain.model.MeasurementEntry;
 import com.black.bmitracker.domain.model.UserProfile;
-import com.black.bmitracker.domain.model.enums.Gender;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
 import com.black.bmitracker.domain.service.HealthTrackerService;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Parent;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class MainDashboardView {
 
     private final HealthTrackerService healthTrackerService;
-    private UserProfile currentProfile;
+    private final UserProfile activeProfile;
+    private final Runnable onBackToProfiles;
 
-    private final BorderPane rootLayout;
+    private final BorderPane rootPane = new BorderPane();
+    private final ObservableList<MeasurementEntry> historyData = FXCollections.observableArrayList();
+    private final XYChart.Series<String, Number> trendSeries = new XYChart.Series<>();
+
+    private Label currentBmiLabel;
+    private Label categoryLabel;
+    private BmiGaugeView gaugeView;
+
+    private ComboBox<UnitSystem> unitSystemCombo;
+    private Label weightLabel;
     private TextField weightField;
+    private Label heightLabel;
     private TextField heightField;
-    private ComboBox<UnitSystem> unitSystemComboBox;
-    private Label bmiValueLabel;
-    private Label bmiCategoryLabel;
-    private TableView<MeasurementEntry> historyTable;
-    private XYChart.Series<String, Number> bmiSeries;
+    private DatePicker datePicker;
+    private CheckBox useCurrentTimeCheck;
 
-    public MainDashboardView() {
-        this.healthTrackerService = new HealthTrackerService();
-        this.rootLayout = new BorderPane();
-        initializeDefaultProfile();
-        buildUI();
-        refreshDashboardData();
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    public MainDashboardView(HealthTrackerService healthTrackerService, UserProfile activeProfile, Runnable onBackToProfiles) {
+        this.healthTrackerService = healthTrackerService;
+        this.activeProfile = activeProfile;
+        this.onBackToProfiles = onBackToProfiles;
+
+        initializeUi();
+        loadUserData();
     }
 
-    public Parent getView() {
-        return rootLayout;
+    public BorderPane getView() {
+        return rootPane;
     }
 
-    private void initializeDefaultProfile() {
-        this.currentProfile = healthTrackerService.getOrCreateDefaultProfile(
-                "Mr. Black",
-                Gender.MALE,
-                LocalDate.of(1992, 1, 1)
-        );
-    }
-
-    private void buildUI() {
-        rootLayout.setStyle("-fx-background-color: #12141d;");
-        rootLayout.setTop(createHeader());
-        rootLayout.setLeft(createInputSidebar());
-        rootLayout.setCenter(createCenterContent());
+    private void initializeUi() {
+        rootPane.setStyle("-fx-background-color: #0f172a;");
+        rootPane.setTop(createHeader());
+        rootPane.setLeft(createSidebar());
+        rootPane.setCenter(createCenterDashboard());
     }
 
     private HBox createHeader() {
         HBox header = new HBox();
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(16, 24, 16, 24));
-        header.setStyle("-fx-background-color: #1a1d28; -fx-border-color: #272b3c; -fx-border-width: 0 0 1 0;");
+        header.setStyle("-fx-background-color: #1e293b; -fx-border-color: #334155; -fx-border-width: 0 0 1 0;");
 
-        Label title = new Label("BMI TRACKER PRO");
-        title.setFont(Font.font("System", FontWeight.BOLD, 20));
-        title.setTextFill(Color.web("#6366f1"));
+        Label brandLabel = new Label("BMI TRACKER PRO");
+        brandLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 18));
+        brandLabel.setTextFill(Color.web("#818cf8"));
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Label profileInfoLabel = new Label("User: " + currentProfile.getUsername());
-        profileInfoLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 14));
-        profileInfoLabel.setTextFill(Color.web("#94a3b8"));
+        Label userLabel = new Label("User: " + activeProfile.getUsername());
+        userLabel.setFont(Font.font("Segoe UI", FontWeight.MEDIUM, 13));
+        userLabel.setTextFill(Color.web("#cbd5e1"));
 
-        header.getChildren().addAll(title, spacer, profileInfoLabel);
+        Button switchUserBtn = new Button("Switch User");
+        switchUserBtn.setStyle("-fx-background-color: #334155; -fx-text-fill: #cbd5e1; -fx-background-radius: 6; -fx-cursor: hand;");
+        switchUserBtn.setOnAction(e -> onBackToProfiles.run());
+
+        header.getChildren().addAll(brandLabel, spacer, userLabel, switchUserBtn);
+        header.setSpacing(15);
         return header;
     }
 
-    private VBox createInputSidebar() {
-        VBox sidebar = new VBox(15);
+    private VBox createSidebar() {
+        VBox sidebar = new VBox(14);
         sidebar.setPadding(new Insets(24));
-        sidebar.setPrefWidth(300);
-        sidebar.setStyle("-fx-background-color: #1a1d28; -fx-border-color: #272b3c; -fx-border-width: 0 1 0 0;");
+        sidebar.setPrefWidth(280);
+        sidebar.setStyle("-fx-background-color: #1e293b; -fx-border-color: #334155; -fx-border-width: 0 1 0 0;");
 
         Label formTitle = new Label("New Measurement");
-        formTitle.setFont(Font.font("System", FontWeight.BOLD, 16));
+        formTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
         formTitle.setTextFill(Color.web("#f8fafc"));
 
         Label unitLabel = new Label("Unit System");
         unitLabel.setTextFill(Color.web("#94a3b8"));
-        unitSystemComboBox = new ComboBox<>(FXCollections.observableArrayList(UnitSystem.METRIC, UnitSystem.IMPERIAL));
-        unitSystemComboBox.setValue(UnitSystem.METRIC);
-        unitSystemComboBox.setMaxWidth(Double.MAX_VALUE);
-        unitSystemComboBox.setStyle("-fx-background-color: #242938; -fx-text-fill: white; -fx-mark-color: white;");
 
-        Label weightLabel = new Label("Weight (kg / lbs)");
+        unitSystemCombo = new ComboBox<>(FXCollections.observableArrayList(UnitSystem.values()));
+        unitSystemCombo.getSelectionModel().select(UnitSystem.METRIC);
+        unitSystemCombo.setMaxWidth(Double.MAX_VALUE);
+        unitSystemCombo.setStyle("-fx-background-color: #475569; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;");
+
+        weightLabel = new Label("Weight (kg)");
         weightLabel.setTextFill(Color.web("#94a3b8"));
         weightField = new TextField();
-        weightField.setPromptText("e.g. 75.5");
-        applyInputStyle(weightField);
+        weightField.setPromptText("e.g. 70.0");
+        styleInput(weightField);
 
-        Label heightLabel = new Label("Height (cm / in)");
+        heightLabel = new Label("Height (cm)");
         heightLabel.setTextFill(Color.web("#94a3b8"));
         heightField = new TextField();
-        heightField.setPromptText("e.g. 178.0");
-        applyInputStyle(heightField);
+        heightField.setPromptText("e.g. 175.0");
+        styleInput(heightField);
 
-        Button calculateBtn = new Button("Record Measurement");
-        calculateBtn.setMaxWidth(Double.MAX_VALUE);
-        calculateBtn.setFont(Font.font("System", FontWeight.BOLD, 14));
-        calculateBtn.setStyle("-fx-background-color: #6366f1; -fx-text-fill: white; -fx-padding: 10 16; -fx-background-radius: 6; -fx-cursor: hand;");
-        calculateBtn.setOnAction(_ -> handleRecordMeasurement());
+        unitSystemCombo.setOnAction(e -> updateUnitSystemLabels());
 
-        sidebar.getChildren().addAll(
-                formTitle,
-                unitLabel, unitSystemComboBox,
-                weightLabel, weightField,
-                heightLabel, heightField,
-                calculateBtn
-        );
+        Label dateLabel = new Label("Measurement Date");
+        dateLabel.setTextFill(Color.web("#94a3b8"));
 
+        datePicker = new DatePicker(LocalDate.now());
+        datePicker.setMaxWidth(Double.MAX_VALUE);
+        datePicker.setDisable(true);
+
+        useCurrentTimeCheck = new CheckBox("Use Current Time");
+        useCurrentTimeCheck.setSelected(true);
+        useCurrentTimeCheck.setTextFill(Color.web("#cbd5e1"));
+        useCurrentTimeCheck.setOnAction(e -> datePicker.setDisable(useCurrentTimeCheck.isSelected()));
+
+        Button recordBtn = new Button("Record Measurement");
+        recordBtn.setMaxWidth(Double.MAX_VALUE);
+        recordBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 13));
+        recordBtn.setStyle("-fx-background-color: #6366f1; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10; -fx-cursor: hand;");
+        recordBtn.setOnAction(e -> handleRecordMeasurement());
+
+        sidebar.getChildren().addAll(formTitle, unitLabel, unitSystemCombo, weightLabel, weightField, heightLabel, heightField, dateLabel, useCurrentTimeCheck, datePicker, recordBtn);
         return sidebar;
     }
 
-    private VBox createCenterContent() {
-        VBox center = new VBox(20);
-        center.setPadding(new Insets(24));
+    private void updateUnitSystemLabels() {
+        if (unitSystemCombo.getValue() == UnitSystem.METRIC) {
+            weightLabel.setText("Weight (kg)");
+            weightField.setPromptText("e.g. 70.0");
+            heightLabel.setText("Height (cm)");
+            heightField.setPromptText("e.g. 175.0");
+        } else {
+            weightLabel.setText("Weight (lbs)");
+            weightField.setPromptText("e.g. 154.3");
+            heightLabel.setText("Height (in)");
+            heightField.setPromptText("e.g. 68.9");
+        }
+    }
 
-        HBox statsCard = createStatsCard();
+    private void styleInput(TextField tf) {
+        tf.setStyle("-fx-background-color: #0f172a; -fx-text-fill: #f8fafc; -fx-border-color: #475569; -fx-border-radius: 6; -fx-padding: 8;");
+    }
+
+    private VBox createCenterDashboard() {
+        VBox centerBox = new VBox(16);
+        centerBox.setPadding(new Insets(20));
+
+        HBox statCards = new HBox(16);
+        VBox summaryCard = new VBox(8);
+        summaryCard.setPadding(new Insets(16));
+        summaryCard.setPrefWidth(260);
+        summaryCard.setStyle("-fx-background-color: #1e293b; -fx-background-radius: 8; -fx-border-color: #334155; -fx-border-radius: 8;");
+
+        Label bmiTitle = new Label("CURRENT BMI");
+        bmiTitle.setFont(Font.font("Segoe UI", FontWeight.BOLD, 11));
+        bmiTitle.setTextFill(Color.web("#94a3b8"));
+
+        currentBmiLabel = new Label("--");
+        currentBmiLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 30));
+        currentBmiLabel.setTextFill(Color.web("#f8fafc"));
+
+        categoryLabel = new Label("NO DATA");
+        categoryLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        categoryLabel.setTextFill(Color.web("#64748b"));
+
+        summaryCard.getChildren().addAll(bmiTitle, currentBmiLabel, categoryLabel);
+
+        VBox gaugeCard = new VBox(4);
+        gaugeCard.setPadding(new Insets(10));
+        gaugeCard.setAlignment(Pos.CENTER);
+        gaugeCard.setStyle("-fx-background-color: #1e293b; -fx-background-radius: 8; -fx-border-color: #334155; -fx-border-radius: 8;");
+        gaugeView = new BmiGaugeView();
+        gaugeCard.getChildren().add(gaugeView);
+
+        statCards.getChildren().addAll(summaryCard, gaugeCard);
 
         CategoryAxis xAxis = new CategoryAxis();
         xAxis.setLabel("Date");
@@ -147,139 +209,83 @@ public class MainDashboardView {
 
         LineChart<String, Number> trendChart = new LineChart<>(xAxis, yAxis);
         trendChart.setTitle("BMI Trend Over Time");
-        trendChart.setPrefHeight(250);
         trendChart.setLegendVisible(false);
-        trendChart.setStyle("-fx-background: transparent; -fx-text-base-color: #94a3b8;");
+        trendChart.setPrefHeight(200);
+        trendChart.getData().add(trendSeries);
 
-        bmiSeries = new XYChart.Series<>();
-        trendChart.getData().add(bmiSeries);
+        TableView<MeasurementEntry> table = createTable();
+        VBox.setVgrow(table, Priority.ALWAYS);
 
-        createHistoryTable();
-
-        VBox.setVgrow(historyTable, Priority.ALWAYS);
-        center.getChildren().addAll(statsCard, trendChart, historyTable);
-        return center;
-    }
-
-    private HBox createStatsCard() {
-        HBox card = new HBox(30);
-        card.setPadding(new Insets(20));
-        card.setAlignment(Pos.CENTER_LEFT);
-        card.setStyle("-fx-background-color: #1e2230; -fx-background-radius: 8; -fx-border-color: #2b3044; -fx-border-radius: 8;");
-
-        VBox bmiBox = new VBox(4);
-        Label titleLabel = new Label("CURRENT BMI");
-        titleLabel.setFont(Font.font("System", FontWeight.SEMI_BOLD, 12));
-        titleLabel.setTextFill(Color.web("#94a3b8"));
-
-        bmiValueLabel = new Label("--");
-        bmiValueLabel.setFont(Font.font("System", FontWeight.BOLD, 36));
-        bmiValueLabel.setTextFill(Color.web("#f8fafc"));
-        bmiBox.getChildren().addAll(titleLabel, bmiValueLabel);
-
-        VBox statusBox = new VBox(4);
-        Label statusTitle = new Label("CLASSIFICATION");
-        statusTitle.setFont(Font.font("System", FontWeight.SEMI_BOLD, 12));
-        statusTitle.setTextFill(Color.web("#94a3b8"));
-
-        bmiCategoryLabel = new Label("No Data Yet");
-        bmiCategoryLabel.setFont(Font.font("System", FontWeight.BOLD, 22));
-        bmiCategoryLabel.setTextFill(Color.web("#38bdf8"));
-        statusBox.getChildren().addAll(statusTitle, bmiCategoryLabel);
-
-        card.getChildren().addAll(bmiBox, statusBox);
-        return card;
+        centerBox.getChildren().addAll(statCards, trendChart, table);
+        return centerBox;
     }
 
     @SuppressWarnings("unchecked")
-    private void createHistoryTable() {
-        historyTable = new TableView<>();
-        historyTable.setStyle("-fx-background-color: #1a1d28; -fx-base: #1a1d28; -fx-control-inner-background: #1a1d28; -fx-text-fill: white;");
+    private TableView<MeasurementEntry> createTable() {
+        TableView<MeasurementEntry> table = new TableView<>(historyData);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<MeasurementEntry, String> dateCol = new TableColumn<>("Date");
-        dateCol.setCellValueFactory(data -> {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            return new javafx.beans.property.SimpleStringProperty(data.getValue().getRecordedAt().format(formatter));
-        });
-        dateCol.setPrefWidth(160);
+        dateCol.setCellValueFactory(data -> new SimpleStringProperty(data.getValue().getRecordedAt().format(FORMATTER)));
 
-        TableColumn<MeasurementEntry, Double> weightCol = new TableColumn<>("Weight (kg)");
-        weightCol.setCellValueFactory(new PropertyValueFactory<>("weightKg"));
-        weightCol.setPrefWidth(120);
+        TableColumn<MeasurementEntry, Number> weightCol = new TableColumn<>("Weight (kg)");
+        weightCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getWeightKg()));
 
-        TableColumn<MeasurementEntry, Double> heightCol = new TableColumn<>("Height (cm)");
-        heightCol.setCellValueFactory(new PropertyValueFactory<>("heightCm"));
-        heightCol.setPrefWidth(120);
+        TableColumn<MeasurementEntry, Number> heightCol = new TableColumn<>("Height (cm)");
+        heightCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getHeightCm()));
 
-        TableColumn<MeasurementEntry, Double> bmiCol = new TableColumn<>("BMI");
-        bmiCol.setCellValueFactory(new PropertyValueFactory<>("bmiValue"));
-        bmiCol.setPrefWidth(100);
+        TableColumn<MeasurementEntry, Number> bmiCol = new TableColumn<>("BMI");
+        bmiCol.setCellValueFactory(data -> new SimpleDoubleProperty(data.getValue().getBmiValue()));
 
-        historyTable.getColumns().addAll(dateCol, weightCol, heightCol, bmiCol);
+        table.getColumns().addAll(dateCol, weightCol, heightCol, bmiCol);
+        return table;
     }
 
     private void handleRecordMeasurement() {
         try {
             double weight = Double.parseDouble(weightField.getText().trim());
             double height = Double.parseDouble(heightField.getText().trim());
-            UnitSystem system = unitSystemComboBox.getValue();
+            UnitSystem unit = unitSystemCombo.getValue();
 
-            BmiResultDto result = healthTrackerService.recordMeasurement(currentProfile, weight, height, system);
+            LocalDateTime timestamp = useCurrentTimeCheck.isSelected()
+                    ? LocalDateTime.now()
+                    : LocalDateTime.of(datePicker.getValue(), LocalTime.of(12, 0));
 
-            bmiValueLabel.setText(String.format("%.2f", result.bmiValue()));
-            bmiCategoryLabel.setText(result.category().name().replace("_", " "));
-            applyCategoryColor(result.category().name());
+            BmiResultDto result = healthTrackerService.recordMeasurement(activeProfile, weight, height, unit, timestamp);
 
+            currentBmiLabel.setText(String.format("%.2f", result.bmiValue()));
+            categoryLabel.setText(result.category().name());
+            categoryLabel.setTextFill(Color.web(switch (result.category()) {
+                case UNDERWEIGHT -> "#38bdf8";
+                case NORMAL -> "#22c55e";
+                case OVERWEIGHT -> "#f59e0b";
+                default -> "#ef4444";
+            }));
+
+            gaugeView.setBmi(result.bmiValue());
             weightField.clear();
             heightField.clear();
-
-            refreshDashboardData();
-        } catch (NumberFormatException _) {
-            showError("Invalid Input", "Please enter valid numeric values for height and weight.");
-        } catch (Exception ex) {
-            showError("Error", ex.getMessage());
+            loadUserData();
+        } catch (NumberFormatException ex) {
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Please enter valid numeric values for weight and height.", ButtonType.OK);
+            alert.showAndWait();
         }
     }
 
-    private void refreshDashboardData() {
-        List<MeasurementEntry> history = healthTrackerService.getMeasurementHistory(currentProfile.getId());
-        ObservableList<MeasurementEntry> tableData = FXCollections.observableArrayList(history);
-        historyTable.setItems(tableData);
+    private void loadUserData() {
+        List<MeasurementEntry> history = healthTrackerService.getMeasurementHistory(activeProfile.getId());
+        historyData.setAll(history);
 
         if (!history.isEmpty()) {
             MeasurementEntry latest = history.getFirst();
-            bmiValueLabel.setText(String.format("%.2f", latest.getBmiValue()));
+            currentBmiLabel.setText(String.format("%.2f", latest.getBmiValue()));
+            gaugeView.setBmi(latest.getBmiValue());
         }
 
-        List<MeasurementEntry> trend = healthTrackerService.getTrendData(currentProfile.getId());
-        bmiSeries.getData().clear();
-        DateTimeFormatter chartFormatter = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        trendSeries.getData().clear();
+        List<MeasurementEntry> trend = healthTrackerService.getTrendData(activeProfile.getId());
         for (MeasurementEntry entry : trend) {
-            bmiSeries.getData().add(new XYChart.Data<>(entry.getRecordedAt().format(chartFormatter), entry.getBmiValue()));
+            trendSeries.getData().add(new XYChart.Data<>(entry.getRecordedAt().format(FORMATTER), entry.getBmiValue()));
         }
-    }
-
-    private void applyCategoryColor(String category) {
-        if (category.contains("NORMAL")) {
-            bmiCategoryLabel.setTextFill(Color.web("#22c55e"));
-        } else if (category.contains("UNDERWEIGHT")) {
-            bmiCategoryLabel.setTextFill(Color.web("#38bdf8"));
-        } else if (category.contains("OVERWEIGHT")) {
-            bmiCategoryLabel.setTextFill(Color.web("#f59e0b"));
-        } else {
-            bmiCategoryLabel.setTextFill(Color.web("#ef4444"));
-        }
-    }
-
-    private void applyInputStyle(TextField tf) {
-        tf.setStyle("-fx-background-color: #242938; -fx-text-fill: white; -fx-prompt-text-fill: #64748b; -fx-border-color: #334155; -fx-border-radius: 4; -fx-padding: 8;");
-    }
-
-    private void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }
