@@ -1,4 +1,4 @@
-package com.black.bmitracker.repository;
+package com.black.bmitracker.infrastructure.persistence.config;
 
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.MetadataSources;

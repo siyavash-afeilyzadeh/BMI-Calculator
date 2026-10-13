@@ -1,8 +1,8 @@
-package com.black.bmitracker.repository;
+package com.black.bmitracker.infrastructure.persistence.repository;
 
-import com.black.bmitracker.domain.model.UserProfile;
+import com.black.bmitracker.domain.model.entity.UserProfile;
 import com.black.bmitracker.domain.model.enums.Gender;
-import org.junit.jupiter.api.AfterAll;
+import com.black.bmitracker.infrastructure.persistence.repository.UserProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.black.bmitracker.repository;
+package com.black.bmitracker.infrastructure.persistence.repository;
 
 import java.util.List;
 import java.util.Optional;

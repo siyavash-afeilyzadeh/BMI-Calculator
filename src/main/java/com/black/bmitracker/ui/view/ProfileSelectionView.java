@@ -1,8 +1,8 @@
-package com.black.bmitracker.ui;
+package com.black.bmitracker.ui.view;
 
-import com.black.bmitracker.domain.model.UserProfile;
+import com.black.bmitracker.domain.model.entity.UserProfile;
 import com.black.bmitracker.domain.model.enums.Gender;
-import com.black.bmitracker.domain.service.HealthTrackerService;
+import com.black.bmitracker.application.service.HealthTrackerService;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;

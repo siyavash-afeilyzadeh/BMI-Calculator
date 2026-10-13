@@ -1,13 +1,16 @@
-package com.black.bmitracker.domain.service;
+package com.black.bmitracker.application.service;
 
-import com.black.bmitracker.domain.dto.BmiResultDto;
-import com.black.bmitracker.domain.model.MeasurementEntry;
-import com.black.bmitracker.domain.model.UserProfile;
+import com.black.bmitracker.application.dto.BmiResultDto;
+import com.black.bmitracker.domain.model.entity.MeasurementEntry;
+import com.black.bmitracker.domain.model.entity.UserProfile;
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.Gender;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
-import com.black.bmitracker.repository.MeasurementEntryRepository;
-import com.black.bmitracker.repository.UserProfileRepository;
+import com.black.bmitracker.domain.service.BmiCalculatorService;
+import com.black.bmitracker.domain.service.BmiCategoryClassifier;
+import com.black.bmitracker.domain.service.UnitConverterService;
+import com.black.bmitracker.infrastructure.persistence.repository.MeasurementEntryRepository;
+import com.black.bmitracker.infrastructure.persistence.repository.UserProfileRepository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

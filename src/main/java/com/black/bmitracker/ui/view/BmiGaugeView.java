@@ -1,4 +1,4 @@
-package com.black.bmitracker.ui;
+package com.black.bmitracker.ui.view;
 
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.service.BmiCategoryClassifier;

@@ -1,4 +1,4 @@
-package com.black.bmitracker.domain.dto;
+package com.black.bmitracker.application.dto;
 
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.UnitSystem;

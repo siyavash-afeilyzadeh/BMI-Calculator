@@ -1,4 +1,4 @@
-package com.black.bmitracker.domain.model;
+package com.black.bmitracker.domain.model.entity;
 
 import com.black.bmitracker.domain.model.enums.UnitSystem;
 import jakarta.persistence.*;

@@ -1,6 +1,7 @@
-package com.black.bmitracker.repository;
+package com.black.bmitracker.infrastructure.persistence.repository;
 
-import com.black.bmitracker.domain.model.MeasurementEntry;
+import com.black.bmitracker.domain.model.entity.MeasurementEntry;
+import com.black.bmitracker.infrastructure.persistence.config.HibernateUtil;
 import org.hibernate.Session;
 
 import java.util.List;

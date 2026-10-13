@@ -9,7 +9,7 @@
         <property name="hibernate.show_sql">true</property>
         <property name="hibernate.format_sql">true</property>
 
-        <mapping class="com.black.bmitracker.domain.model.UserProfile"/>
-        <mapping class="com.black.bmitracker.domain.model.MeasurementEntry"/>
+        <mapping class="com.black.bmitracker.domain.model.entity.UserProfile"/>
+        <mapping class="com.black.bmitracker.domain.model.entity.MeasurementEntry"/>
     </session-factory>
 </hibernate-configuration>

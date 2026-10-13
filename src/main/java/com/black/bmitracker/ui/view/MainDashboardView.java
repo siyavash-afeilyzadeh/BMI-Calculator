@@ -1,12 +1,12 @@
-package com.black.bmitracker.ui;
+package com.black.bmitracker.ui.view;
 
-import com.black.bmitracker.domain.dto.BmiResultDto;
-import com.black.bmitracker.domain.model.MeasurementEntry;
-import com.black.bmitracker.domain.model.UserProfile;
+import com.black.bmitracker.application.dto.BmiResultDto;
+import com.black.bmitracker.domain.model.entity.MeasurementEntry;
+import com.black.bmitracker.domain.model.entity.UserProfile;
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
 import com.black.bmitracker.domain.service.BmiCategoryClassifier;
-import com.black.bmitracker.domain.service.HealthTrackerService;
+import com.black.bmitracker.application.service.HealthTrackerService;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;

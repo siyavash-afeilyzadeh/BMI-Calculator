@@ -1,7 +1,9 @@
 package com.black.bmitracker.ui;
 
-import com.black.bmitracker.domain.model.UserProfile;
-import com.black.bmitracker.domain.service.HealthTrackerService;
+import com.black.bmitracker.domain.model.entity.UserProfile;
+import com.black.bmitracker.application.service.HealthTrackerService;
+import com.black.bmitracker.ui.view.MainDashboardView;
+import com.black.bmitracker.ui.view.ProfileSelectionView;
 import javafx.application.Application;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
