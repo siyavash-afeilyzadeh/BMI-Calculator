@@ -15,23 +15,26 @@ public class BmiTrackerApp extends Application {
     public void start(Stage stage) {
         this.primaryStage = stage;
         this.healthTrackerService = new HealthTrackerService();
-        showProfileSelection();
 
         stage.setTitle("BMI Health Tracker Pro");
-        stage.setWidth(1080);
-        stage.setHeight(720);
+        stage.setMinWidth(1080);
+        stage.setMinHeight(700);
+        stage.setWidth(1920);
+        stage.setHeight(800);
+
+        showProfileSelection();
         stage.show();
     }
 
     private void showProfileSelection() {
         ProfileSelectionView profileView = new ProfileSelectionView(healthTrackerService, this::showDashboard);
-        Scene scene = new Scene(profileView, 1080, 720);
+        Scene scene = new Scene(profileView, primaryStage.getWidth(), primaryStage.getHeight());
         primaryStage.setScene(scene);
     }
 
     private void showDashboard(UserProfile profile) {
         MainDashboardView dashboardView = new MainDashboardView(healthTrackerService, profile, this::showProfileSelection);
-        Scene scene = new Scene(dashboardView.getView(), 1080, 720);
+        Scene scene = new Scene(dashboardView.getView(), primaryStage.getWidth(), primaryStage.getHeight());
         primaryStage.setScene(scene);
     }
 

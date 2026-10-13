@@ -30,44 +30,67 @@ public class ProfileSelectionView extends VBox {
 
     private void initView() {
         setAlignment(Pos.CENTER);
-        setSpacing(20);
+        setSpacing(25);
         setPadding(new Insets(40));
-        setStyle("-fx-background-color: #0f172a;");
+        setStyle("-fx-background-color: #0b1120;");
 
         Label titleLabel = new Label("BMI TRACKER PRO");
-        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 28));
+        titleLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 32));
         titleLabel.setTextFill(Color.web("#818cf8"));
 
-        Label subtitleLabel = new Label("Select or Create a User Profile");
-        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 14));
-        subtitleLabel.setTextFill(Color.web("#94a3b8"));
+        Label subtitleLabel = new Label("Select an existing profile or register a new one");
+        subtitleLabel.setFont(Font.font("Segoe UI", FontWeight.NORMAL, 15));
+        subtitleLabel.setTextFill(Color.web("#cbd5e1"));
 
-        VBox card = new VBox(15);
-        card.setMaxWidth(380);
-        card.setPadding(new Insets(25));
-        card.setStyle("-fx-background-color: #1e293b; -fx-background-radius: 12; -fx-border-color: #334155; -fx-border-radius: 12;");
+        VBox card = new VBox(16);
+        card.setMaxWidth(420);
+        card.setPadding(new Insets(30));
+        card.setStyle("-fx-background-color: #1e293b; -fx-background-radius: 14; -fx-border-color: #475569; -fx-border-width: 1.5;");
 
-        Label existingLabel = new Label("Existing Profile:");
-        existingLabel.setTextFill(Color.web("#cbd5e1"));
+        // Existing Profile section
+        Label existingLabel = new Label("Existing User Profiles:");
+        existingLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        existingLabel.setTextFill(Color.web("#ffffff"));
 
         ComboBox<UserProfile> profileCombo = new ComboBox<>();
         profileCombo.setMaxWidth(Double.MAX_VALUE);
-        profileCombo.setStyle("-fx-background-color: #334155; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 6;");
+        profileCombo.setStyle(
+                "-fx-background-color: #334155; " +
+                        "-fx-mark-color: #ffffff; " +
+                        "-fx-border-color: #64748b; " +
+                        "-fx-border-radius: 6; " +
+                        "-fx-background-radius: 6; " +
+                        "-fx-padding: 6;"
+        );
 
         List<UserProfile> profiles = healthTrackerService.getAllProfiles();
         profileCombo.setItems(FXCollections.observableArrayList(profiles));
+
         profileCombo.setCellFactory(lv -> new ListCell<>() {
             @Override
             protected void updateItem(UserProfile item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.getUsername());
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.getUsername() + " (" + item.getGender() + ")");
+                    setTextFill(Color.WHITE);
+                    setStyle("-fx-background-color: #1e293b; -fx-font-size: 13px; -fx-font-weight: bold;");
+                }
             }
         });
+
         profileCombo.setButtonCell(new ListCell<>() {
             @Override
             protected void updateItem(UserProfile item, boolean empty) {
                 super.updateItem(item, empty);
-                setText(empty || item == null ? "Select existing user..." : item.getUsername());
+                if (empty || item == null) {
+                    setText("Select existing user...");
+                } else {
+                    setText(item.getUsername() + " (" + item.getGender() + ")");
+                }
+                setTextFill(Color.WHITE);
+                setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
             }
         });
 
@@ -76,23 +99,63 @@ public class ProfileSelectionView extends VBox {
         }
 
         Separator separator = new Separator();
+        separator.setPadding(new Insets(8, 0, 8, 0));
 
+        // Create New Profile Section
         Label newLabel = new Label("Or Create New Profile:");
-        newLabel.setTextFill(Color.web("#cbd5e1"));
+        newLabel.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        newLabel.setTextFill(Color.web("#ffffff"));
+
+        Label userPromptLabel = new Label("Username:");
+        userPromptLabel.setTextFill(Color.web("#e2e8f0"));
 
         TextField usernameField = new TextField();
         usernameField.setPromptText("Enter new username...");
-        usernameField.setStyle("-fx-background-color: #0f172a; -fx-text-fill: white; -fx-border-color: #475569; -fx-border-radius: 6; -fx-padding: 8;");
+        usernameField.setStyle("-fx-background-color: #0f172a; -fx-text-fill: #ffffff; -fx-border-color: #64748b; -fx-border-radius: 6; -fx-padding: 8;");
+
+        Label genderPromptLabel = new Label("Gender:");
+        genderPromptLabel.setTextFill(Color.web("#e2e8f0"));
 
         ComboBox<Gender> genderCombo = new ComboBox<>(FXCollections.observableArrayList(Gender.values()));
         genderCombo.getSelectionModel().select(Gender.MALE);
         genderCombo.setMaxWidth(Double.MAX_VALUE);
-        genderCombo.setStyle("-fx-background-color: #334155; -fx-text-fill: white; -fx-padding: 6;");
+        genderCombo.setStyle(
+                "-fx-background-color: #334155; " +
+                        "-fx-mark-color: #ffffff; " +
+                        "-fx-border-color: #64748b; " +
+                        "-fx-border-radius: 6; " +
+                        "-fx-background-radius: 6; " +
+                        "-fx-padding: 6;"
+        );
 
-        Button continueBtn = new Button("Continue to Dashboard");
+        genderCombo.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Gender item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.name());
+                    setTextFill(Color.WHITE);
+                    setStyle("-fx-background-color: #1e293b; -fx-font-size: 13px; -fx-font-weight: bold;");
+                }
+            }
+        });
+
+        genderCombo.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(Gender item, boolean empty) {
+                super.updateItem(item, empty);
+                setText(empty || item == null ? "" : item.name());
+                setTextFill(Color.WHITE);
+                setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            }
+        });
+
+        Button continueBtn = new Button("Launch BMI Tracker");
         continueBtn.setMaxWidth(Double.MAX_VALUE);
-        continueBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
-        continueBtn.setStyle("-fx-background-color: #6366f1; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10; -fx-cursor: hand;");
+        continueBtn.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        continueBtn.setStyle("-fx-background-color: #6366f1; -fx-text-fill: #ffffff; -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand;");
 
         continueBtn.setOnAction(e -> {
             String newUsername = usernameField.getText().trim();
@@ -107,7 +170,15 @@ public class ProfileSelectionView extends VBox {
             }
         });
 
-        card.getChildren().addAll(existingLabel, profileCombo, separator, newLabel, usernameField, genderCombo, continueBtn);
+        card.getChildren().addAll(
+                existingLabel, profileCombo,
+                separator,
+                newLabel,
+                userPromptLabel, usernameField,
+                genderPromptLabel, genderCombo,
+                continueBtn
+        );
+
         getChildren().addAll(titleLabel, subtitleLabel, card);
     }
 }

@@ -1,21 +1,26 @@
 package com.black.bmitracker.ui;
 
+import com.black.bmitracker.domain.model.enums.BmiCategory;
+import com.black.bmitracker.domain.service.BmiCategoryClassifier;
+import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.ArcType;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 
-public class BmiGaugeView extends Pane {
+public class BmiGaugeView extends VBox {
 
     private final Canvas canvas;
+    private final BmiCategoryClassifier classifier = new BmiCategoryClassifier();
     private double currentBmi = 0.0;
 
     public BmiGaugeView() {
-        this.canvas = new Canvas(280, 160);
+        setAlignment(Pos.CENTER);
+        this.canvas = new Canvas(320, 180);
         getChildren().add(canvas);
         drawGauge();
     }
@@ -29,50 +34,66 @@ public class BmiGaugeView extends Pane {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
-        double cx = 140;
-        double cy = 135;
-        double radius = 100;
-        double strokeWidth = 16;
+        double cx = 160.0;
+        double cy = 135.0;
+        double radius = 100.0;
+        double strokeWidth = 16.0;
 
         gc.setLineWidth(strokeWidth);
 
-        // Underweight: < 18.5 (180 deg to 135 deg)
+        // WHO 6-Class Spectrum Mapping (Angles: 180 deg to 0 deg)
+        // 1. Underweight (< 18.5) -> Arc: 180 down to 146 deg (34 deg span)
         gc.setStroke(Color.web("#38bdf8"));
-        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 135, 45, ArcType.OPEN);
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 146, 34, ArcType.OPEN);
 
-        // Normal: 18.5 - 25.0 (135 deg to 75 deg)
+        // 2. Normal (18.5 - 25.0) -> Arc: 146 down to 108 deg (38 deg span)
         gc.setStroke(Color.web("#22c55e"));
-        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 75, 60, ArcType.OPEN);
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 108, 38, ArcType.OPEN);
 
-        // Overweight: 25.0 - 30.0 (75 deg to 35 deg)
-        gc.setStroke(Color.web("#f59e0b"));
-        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 35, 40, ArcType.OPEN);
+        // 3. Overweight (25.0 - 30.0) -> Arc: 108 down to 80 deg (28 deg span)
+        gc.setStroke(Color.web("#eab308"));
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 80, 28, ArcType.OPEN);
 
-        // Obese: >= 30.0 (35 deg to 0 deg)
+        // 4. Obese Class I (30.0 - 35.0) -> Arc: 80 down to 52 deg (28 deg span)
+        gc.setStroke(Color.web("#f97316"));
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 52, 28, ArcType.OPEN);
+
+        // 5. Obese Class II (35.0 - 40.0) -> Arc: 52 down to 24 deg (28 deg span)
         gc.setStroke(Color.web("#ef4444"));
-        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 0, 35, ArcType.OPEN);
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 24, 28, ArcType.OPEN);
 
-        // Draw Needle
-        double clampedBmi = Math.max(12.0, Math.min(42.0, currentBmi == 0.0 ? 21.7 : currentBmi));
-        // Linear angle mapping: BMI 12 = 180 deg, BMI 42 = 0 deg
-        double angleRad = Math.toRadians(180.0 - ((clampedBmi - 12.0) / 30.0 * 180.0));
+        // 6. Obese Class III (>= 40.0) -> Arc: 24 down to 0 deg (24 deg span)
+        gc.setStroke(Color.web("#991b1b"));
+        gc.strokeArc(cx - radius, cy - radius, radius * 2, radius * 2, 0, 24, ArcType.OPEN);
+
+        // Map BMI (12.0 to 45.0) to Needle Angle (180 deg to 0 deg)
+        double needleBmi = currentBmi <= 0.0 ? 22.0 : Math.max(12.0, Math.min(45.0, currentBmi));
+        double angleDeg = 180.0 - ((needleBmi - 12.0) / (45.0 - 12.0) * 180.0);
+        double angleRad = Math.toRadians(angleDeg);
 
         double needleLength = radius - 15;
         double nx = cx + needleLength * Math.cos(angleRad);
         double ny = cy - needleLength * Math.sin(angleRad);
 
-        gc.setStroke(Color.web("#e2e8f0"));
-        gc.setLineWidth(3);
+        // Needle
+        gc.setStroke(Color.web("#f8fafc"));
+        gc.setLineWidth(3.0);
         gc.strokeLine(cx, cy, nx, ny);
 
-        // Center Pivot
+        // Needle Base Pivot
         gc.setFill(Color.web("#6366f1"));
         gc.fillOval(cx - 7, cy - 7, 14, 14);
 
-        // Value text underneath
-        gc.setFill(Color.web("#f8fafc"));
-        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 14));
+        // Labels
         gc.setTextAlign(TextAlignment.CENTER);
-        gc.fillText(String.format("BMI: %.2f", currentBmi), cx, cy + 20);
+        gc.setFont(Font.font("Segoe UI", FontWeight.BOLD, 15));
+        gc.setFill(Color.web("#f1f5f9"));
+
+        if (currentBmi > 0.0) {
+            BmiCategory category = classifier.classify(currentBmi);
+            gc.fillText(String.format("BMI: %.2f  •  %s", currentBmi, classifier.getDisplayName(category)), cx, cy + 28);
+        } else {
+            gc.fillText("Select or Record BMI", cx, cy + 28);
+        }
     }
 }
