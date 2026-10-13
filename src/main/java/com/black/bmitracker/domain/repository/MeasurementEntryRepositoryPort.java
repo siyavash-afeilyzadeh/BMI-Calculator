@@ -12,4 +12,5 @@ public interface MeasurementEntryRepositoryPort {
     List<MeasurementEntry> findAll();
     List<MeasurementEntry> findByUserProfileIdOrderByDateAsc(Long userProfileId);
     List<MeasurementEntry> findByUserProfileIdOrderByDateDesc(Long userProfileId);
+    void deleteById(Long id);
 }

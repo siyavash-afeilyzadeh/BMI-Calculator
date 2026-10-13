@@ -12,4 +12,5 @@ public interface UserProfileRepositoryPort {
     List<UserProfile> findAll();
     Optional<UserProfile> findByUsername(String username);
     Optional<UserProfile> findFirstProfile();
+    void deleteById(Long id);
 }

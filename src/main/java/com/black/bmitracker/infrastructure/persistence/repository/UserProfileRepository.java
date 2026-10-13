@@ -34,4 +34,9 @@ public class UserProfileRepository
                     .uniqueResultOptional();
         }
     }
+
+    @Override
+    public void deleteById(Long id) {
+        findById(id).ifPresent(this::delete);
+    }
 }

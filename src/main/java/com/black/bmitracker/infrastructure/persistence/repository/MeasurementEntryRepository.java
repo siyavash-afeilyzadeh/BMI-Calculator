@@ -36,4 +36,9 @@ public class MeasurementEntryRepository
                     .getResultList();
         }
     }
+
+    @Override
+    public void deleteById(Long id) {
+        findById(id).ifPresent(this::delete);
+    }
 }

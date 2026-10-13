@@ -166,4 +166,28 @@ public class HealthTrackerService {
     public List<MeasurementEntry> getTrendData(Long profileId) {
         return measurementEntryRepository.findByUserProfileIdOrderByDateAsc(profileId);
     }
+
+    // =========================================================================
+    // Delete Data
+    // =========================================================================
+
+    /**
+     * Deletes a user profile and all associated measurement records via cascading.
+     */
+    public void deleteProfile(Long profileId) {
+        if (profileId == null) {
+            return;
+        }
+        userProfileRepository.deleteById(profileId);
+    }
+
+    /**
+     * Deletes a single measurement entry by its ID.
+     */
+    public void deleteMeasurement(Long measurementId) {
+        if (measurementId == null) {
+            return;
+        }
+        measurementEntryRepository.deleteById(measurementId);
+    }
 }
