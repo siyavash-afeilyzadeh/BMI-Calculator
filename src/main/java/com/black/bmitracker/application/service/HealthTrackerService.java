@@ -6,6 +6,8 @@ import com.black.bmitracker.domain.model.entity.UserProfile;
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.Gender;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
+import com.black.bmitracker.domain.repository.MeasurementEntryRepositoryPort;
+import com.black.bmitracker.domain.repository.UserProfileRepositoryPort;
 import com.black.bmitracker.domain.service.BmiCalculatorService;
 import com.black.bmitracker.domain.service.BmiCategoryClassifier;
 import com.black.bmitracker.domain.service.UnitConverterService;
@@ -15,22 +17,47 @@ import com.black.bmitracker.infrastructure.persistence.repository.UserProfileRep
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
+/**
+ * Orchestrates business logic, user profile persistence, and BMI measurements.
+ * Adheres strictly to Clean Architecture and DIP using repository ports.
+ */
 public class HealthTrackerService {
 
-    private final UserProfileRepository userProfileRepository;
-    private final MeasurementEntryRepository measurementEntryRepository;
+    private final UserProfileRepositoryPort userProfileRepository;
+    private final MeasurementEntryRepositoryPort measurementEntryRepository;
     private final BmiCalculatorService bmiCalculatorService;
-    private final BmiCategoryClassifier categoryClassifier;
+    private final BmiCategoryClassifier bmiCategoryClassifier;
     private final UnitConverterService unitConverterService;
 
     public HealthTrackerService() {
-        this.userProfileRepository = new UserProfileRepository();
-        this.measurementEntryRepository = new MeasurementEntryRepository();
-        this.bmiCalculatorService = new BmiCalculatorService();
-        this.categoryClassifier = new BmiCategoryClassifier();
-        this.unitConverterService = new UnitConverterService();
+        this(
+                new UserProfileRepository(),
+                new MeasurementEntryRepository(),
+                new BmiCalculatorService(),
+                new BmiCategoryClassifier(),
+                new UnitConverterService()
+        );
     }
+
+    public HealthTrackerService(
+            UserProfileRepositoryPort userProfileRepository,
+            MeasurementEntryRepositoryPort measurementEntryRepository,
+            BmiCalculatorService bmiCalculatorService,
+            BmiCategoryClassifier bmiCategoryClassifier,
+            UnitConverterService unitConverterService
+    ) {
+        this.userProfileRepository = Objects.requireNonNull(userProfileRepository, "userProfileRepository cannot be null");
+        this.measurementEntryRepository = Objects.requireNonNull(measurementEntryRepository, "measurementEntryRepository cannot be null");
+        this.bmiCalculatorService = Objects.requireNonNull(bmiCalculatorService, "bmiCalculatorService cannot be null");
+        this.bmiCategoryClassifier = Objects.requireNonNull(bmiCategoryClassifier, "bmiCategoryClassifier cannot be null");
+        this.unitConverterService = Objects.requireNonNull(unitConverterService, "unitConverterService cannot be null");
+    }
+
+    // =========================================================================
+    // Profile Management
+    // =========================================================================
 
     public List<UserProfile> getAllProfiles() {
         return userProfileRepository.findAll();
@@ -38,64 +65,105 @@ public class HealthTrackerService {
 
     public UserProfile getOrCreateProfileByUsername(String username, Gender gender, LocalDate birthDate) {
         return userProfileRepository.findByUsername(username)
-                .orElseGet(() -> userProfileRepository.save(
-                        UserProfile.builder()
-                                .username(username)
-                                .gender(gender != null ? gender : Gender.MALE)
-                                .birthDate(birthDate != null ? birthDate : LocalDate.now().minusYears(25))
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    UserProfile profile = UserProfile.builder()
+                            .username(username)
+                            .gender(gender)
+                            .birthDate(birthDate)
+                            .build();
+                    return userProfileRepository.save(profile);
+                });
     }
 
     public UserProfile getOrCreateDefaultProfile(String username, Gender gender, LocalDate birthDate) {
         return userProfileRepository.findFirstProfile()
-                .orElseGet(() -> userProfileRepository.save(
-                        UserProfile.builder()
-                                .username(username)
-                                .gender(gender)
-                                .birthDate(birthDate)
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    UserProfile profile = UserProfile.builder()
+                            .username(username)
+                            .gender(gender)
+                            .birthDate(birthDate)
+                            .build();
+                    return userProfileRepository.save(profile);
+                });
+    }
+
+    // =========================================================================
+    // Measurement Recording & BMI Calculation
+    // =========================================================================
+
+    public BmiResultDto recordMeasurement(
+            UserProfile profile,
+            double weight,
+            double height,
+            UnitSystem unitSystem,
+            LocalDateTime recordedAt
+    ) {
+        Objects.requireNonNull(profile, "UserProfile cannot be null");
+
+        double calculatedBmi = bmiCalculatorService.calculate(weight, height, unitSystem);
+        BmiCategory category = bmiCategoryClassifier.classify(calculatedBmi);
+
+        double normalizedWeightKg = (unitSystem == UnitSystem.IMPERIAL)
+                ? unitConverterService.lbsToKg(weight)
+                : weight;
+
+        double normalizedHeightCm = (unitSystem == UnitSystem.IMPERIAL)
+                ? unitConverterService.inchesToCm(height)
+                : height;
+
+        LocalDateTime timestamp = (recordedAt != null) ? recordedAt : LocalDateTime.now();
+
+        MeasurementEntry entry = MeasurementEntry.builder()
+                .userProfile(profile)
+                .weightKg(normalizedWeightKg)
+                .heightCm(normalizedHeightCm)
+                .bmiValue(calculatedBmi)
+                .recordedUnitSystem(unitSystem)
+                .recordedAt(timestamp)
+                .build();
+
+        MeasurementEntry saved = measurementEntryRepository.save(entry);
+
+        return new BmiResultDto(
+                saved.getId(),
+                weight,
+                height,
+                calculatedBmi,
+                category,
+                unitSystem,
+                saved.getRecordedAt()
+        );
     }
 
     public BmiResultDto recordMeasurement(UserProfile profile, double weight, double height, UnitSystem unitSystem) {
         return recordMeasurement(profile, weight, height, unitSystem, LocalDateTime.now());
     }
 
-    public BmiResultDto recordMeasurement(UserProfile profile, double weight, double height, UnitSystem unitSystem, LocalDateTime recordedAt) {
-        double bmi = bmiCalculatorService.calculate(weight, height, unitSystem);
-        BmiCategory category = categoryClassifier.classify(bmi);
-
-        double metricWeight = (unitSystem == UnitSystem.METRIC) ? weight : unitConverterService.lbsToKg(weight);
-        double metricHeight = (unitSystem == UnitSystem.METRIC) ? height : unitConverterService.inchesToCm(height);
-
-        MeasurementEntry entry = MeasurementEntry.builder()
-                .userProfile(profile)
-                .heightCm(metricHeight)
-                .weightKg(metricWeight)
-                .bmiValue(bmi)
-                .recordedUnitSystem(unitSystem)
-                .recordedAt(recordedAt != null ? recordedAt : LocalDateTime.now())
-                .build();
-
-        MeasurementEntry savedEntry = measurementEntryRepository.save(entry);
-
-        return new BmiResultDto(
-                savedEntry.getId(),
-                weight,
-                height,
-                savedEntry.getBmiValue(),
-                category,
-                unitSystem,
-                savedEntry.getRecordedAt()
-        );
+    public BmiResultDto recordMeasurement(
+            Long profileId,
+            double weight,
+            double height,
+            UnitSystem unitSystem,
+            LocalDateTime recordedAt
+    ) {
+        UserProfile profile = userProfileRepository.findById(profileId)
+                .orElseThrow(() -> new IllegalArgumentException("Profile not found with id: " + profileId));
+        return recordMeasurement(profile, weight, height, unitSystem, recordedAt);
     }
 
-    public List<MeasurementEntry> getMeasurementHistory(Long userProfileId) {
-        return measurementEntryRepository.findByUserProfileIdOrderByDateDesc(userProfileId);
+    public BmiResultDto recordMeasurement(Long profileId, double weight, double height, UnitSystem unitSystem) {
+        return recordMeasurement(profileId, weight, height, unitSystem, LocalDateTime.now());
     }
 
-    public List<MeasurementEntry> getTrendData(Long userProfileId) {
-        return measurementEntryRepository.findByUserProfileIdOrderByDateAsc(userProfileId);
+    // =========================================================================
+    // History & Trend Data
+    // =========================================================================
+
+    public List<MeasurementEntry> getMeasurementHistory(Long profileId) {
+        return measurementEntryRepository.findByUserProfileIdOrderByDateDesc(profileId);
+    }
+
+    public List<MeasurementEntry> getTrendData(Long profileId) {
+        return measurementEntryRepository.findByUserProfileIdOrderByDateAsc(profileId);
     }
 }
