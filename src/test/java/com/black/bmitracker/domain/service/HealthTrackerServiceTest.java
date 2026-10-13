@@ -3,6 +3,7 @@ package com.black.bmitracker.domain.service;
 import com.black.bmitracker.domain.dto.BmiResultDto;
 import com.black.bmitracker.domain.model.MeasurementEntry;
 import com.black.bmitracker.domain.model.UserProfile;
+import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.Gender;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
 import com.black.bmitracker.repository.HibernateUtil;
@@ -87,6 +88,11 @@ class HealthTrackerServiceTest {
         );
 
         assertNotNull(result);
+
+        assertEquals(22.86, result.bmiValue(), 0.01);
+        assertEquals(BmiCategory.NORMAL, result.category());
+        assertEquals(UnitSystem.METRIC, result.unitSystem());
+
 
         List<MeasurementEntry> entries = measurementEntryRepository.findByUserProfileIdOrderByDateDesc(profile.getId());
         assertEquals(1, entries.size());
