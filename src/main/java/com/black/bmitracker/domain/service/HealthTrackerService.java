@@ -1,11 +1,11 @@
 package com.black.bmitracker.domain.service;
 
+import com.black.bmitracker.domain.dto.BmiResultDto;
 import com.black.bmitracker.domain.model.MeasurementEntry;
 import com.black.bmitracker.domain.model.UserProfile;
 import com.black.bmitracker.domain.model.enums.BmiCategory;
 import com.black.bmitracker.domain.model.enums.Gender;
 import com.black.bmitracker.domain.model.enums.UnitSystem;
-import com.black.bmitracker.domain.dto.BmiResultDto;
 import com.black.bmitracker.repository.MeasurementEntryRepository;
 import com.black.bmitracker.repository.UserProfileRepository;
 
@@ -29,35 +29,50 @@ public class HealthTrackerService {
         this.unitConverterService = new UnitConverterService();
     }
 
+    public List<UserProfile> getAllProfiles() {
+        return userProfileRepository.findAll();
+    }
+
+    public UserProfile getOrCreateProfileByUsername(String username, Gender gender, LocalDate birthDate) {
+        return userProfileRepository.findByUsername(username)
+                .orElseGet(() -> userProfileRepository.save(
+                        UserProfile.builder()
+                                .username(username)
+                                .gender(gender != null ? gender : Gender.MALE)
+                                .birthDate(birthDate != null ? birthDate : LocalDate.now().minusYears(25))
+                                .build()
+                ));
+    }
+
     public UserProfile getOrCreateDefaultProfile(String username, Gender gender, LocalDate birthDate) {
         return userProfileRepository.findFirstProfile()
-                .orElseGet(() -> {
-                    UserProfile newProfile = UserProfile.builder()
-                            .username(username)
-                            .gender(gender)
-                            .birthDate(birthDate)
-                            .build();
-                    return userProfileRepository.save(newProfile);
-                });
+                .orElseGet(() -> userProfileRepository.save(
+                        UserProfile.builder()
+                                .username(username)
+                                .gender(gender)
+                                .birthDate(birthDate)
+                                .build()
+                ));
     }
 
     public BmiResultDto recordMeasurement(UserProfile profile, double weight, double height, UnitSystem unitSystem) {
-        // ۱. محاسبه مقدار عددی BMI بر مبنای واحد وارد شده
-        double bmiValue = bmiCalculatorService.calculate(weight, height, unitSystem);
-        BmiCategory category = categoryClassifier.classify(bmiValue);
+        return recordMeasurement(profile, weight, height, unitSystem, LocalDateTime.now());
+    }
 
-        // ۲. نرمال‌سازی قد و وزن به سیستم استاندارد متریک (cm و kg) برای ذخیره یکپارچه در دیتابیس
-        double heightInCm = (unitSystem == UnitSystem.METRIC) ? height : unitConverterService.inchesToCm(height);
-        double weightInKg = (unitSystem == UnitSystem.METRIC) ? weight : unitConverterService.lbsToKg(weight);
+    public BmiResultDto recordMeasurement(UserProfile profile, double weight, double height, UnitSystem unitSystem, LocalDateTime recordedAt) {
+        double bmi = bmiCalculatorService.calculate(weight, height, unitSystem);
+        BmiCategory category = categoryClassifier.classify(bmi);
 
-        // ۳. ذخیره در دیتابیس
+        double metricWeight = (unitSystem == UnitSystem.METRIC) ? weight : unitConverterService.lbsToKg(weight);
+        double metricHeight = (unitSystem == UnitSystem.METRIC) ? height : unitConverterService.inchesToCm(height);
+
         MeasurementEntry entry = MeasurementEntry.builder()
                 .userProfile(profile)
-                .heightCm(heightInCm)
-                .weightKg(weightInKg)
-                .bmiValue(bmiValue)
+                .heightCm(metricHeight)
+                .weightKg(metricWeight)
+                .bmiValue(bmi)
                 .recordedUnitSystem(unitSystem)
-                .recordedAt(LocalDateTime.now())
+                .recordedAt(recordedAt != null ? recordedAt : LocalDateTime.now())
                 .build();
 
         MeasurementEntry savedEntry = measurementEntryRepository.save(entry);
@@ -66,7 +81,7 @@ public class HealthTrackerService {
                 savedEntry.getId(),
                 weight,
                 height,
-                bmiValue,
+                savedEntry.getBmiValue(),
                 category,
                 unitSystem,
                 savedEntry.getRecordedAt()
