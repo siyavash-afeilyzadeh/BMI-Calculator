@@ -18,8 +18,9 @@
   <a href="#-key-capabilities">Key Features</a> •
   <a href="#-technical-stack--dependencies">Tech Stack</a> •
   <a href="#-architecture--engineering">Architecture</a> •
-  <a href="#-getting-started">Getting Started</a> •
-  <a href="#-solid-principles-implementation">SOLID Principles</a>
+  <a href="#-getting-started--execution">Getting Started</a> •
+  <a href="#-solid-principles-implementation">SOLID Principles</a> •
+  <a href="#-license">License</a>
 </p>
 
 </div>
@@ -28,18 +29,19 @@
 
 ## 🌟 Key Capabilities
 
-- 📊 **Precision BMI Calculation:** Instant metric (kg/cm) and imperial (lbs/in) BMI calculation with exact input sanitization and classification across 6 standard health categories.
-- 📈 **Longitudinal Health Tracking:** Persisted timestamped measurement history, allowing users to trace body metrics progression over time.
+- 📊 **Precision BMI Calculation:** Instant metric (kg/cm) and imperial (lbs/in) BMI calculation with exact input sanitization and diagnostic classification across standard health categories.
+- 📈 **Longitudinal Health Tracking:** Persisted timestamped measurement history, allowing users to trace body metrics progression over time with trend analytics.
 - 🔄 **Bidirectional Unit Converter:** Built-in domain converter service handling seamless unit switches without numerical drift.
-- 👥 **Multi-Profile Management:** Complete profile identity management supporting creation, profile switching, and customized metric records.
-- 🎨 **Modern High-DPI Desktop Interface:** Styled JavaFX presentation layer fine-tuned for high-resolution displays (1920x1080) with a modern dark theme palette.
-- 🔒 **Zero Native Coupling Persistence:** Fully abstracted repository persistence utilizing in-memory and local file-backed H2 storage through Hibernate.
+- 👥 **Multi-Profile Management:** Complete profile identity management supporting dynamic creation, profile switching, and isolated historical records.
+- 🎨 **Modern High-DPI Desktop Interface:** Styled JavaFX presentation layer fine-tuned for high-resolution displays with a sleek, dark-slate palette (`#0b1120`).
+- 🔒 **Zero Native Coupling Persistence:** Fully abstracted repository persistence utilizing local file-backed H2 embedded storage through Hibernate ORM.
+- 📦 **Dual Distribution Channels:** Available both as a standalone **Fat JAR** and a fully bundled, zero-dependency **Windows Native Executable (`.exe`)**.
 
 ---
 
 ## 🛠️ Technical Stack & Dependencies
 
-All dependencies are defined in `pom.xml` (`com.black:BMI-Tracker:1.0-SNAPSHOT`):
+All dependencies are defined and orchestrated in `pom.xml` (`com.black:BMI-Tracker:1.0.0`):
 
 | Component | Technology | Version | Purpose |
 | :--- | :--- | :--- | :--- |
@@ -47,33 +49,57 @@ All dependencies are defined in `pom.xml` (`com.black:BMI-Tracker:1.0-SNAPSHOT`)
 | **GUI Framework** | OpenJFX (`controls`, `fxml`) | `26.0.2` | Reactive desktop interface components |
 | **ORM / JPA** | Hibernate Core | `8.0.0.Beta3` | Entity persistence and relational mapping |
 | **Database** | H2 Database Engine | `2.5.252` | Lightweight embedded local SQL persistence |
-| **Boilerplate** | Project Lombok | `1.18.48` | Code generation (Builders, Accessors, Records) |
+| **Boilerplate** | Project Lombok | `1.18.48` | Code generation (Builders, Accessors, Slf4j) |
 | **Logging** | SLF4J & Logback Classic | `2.0.18` / `1.6.3` | Structured runtime execution tracing |
-| **Testing** | JUnit Jupiter Engine | `6.1.3` | Isolated domain and use-case automated tests |
-| **Build Tool** | Apache Maven | `3.8+` | Dependency resolution and lifecycle build |
+| **Testing** | JUnit Jupiter Engine | `6.1.3` | Isolated domain and use-case automated unit tests |
+| **Packaging** | Apache Maven & Shade Plugin | `3.8+` / `3.6.0` | Fat JAR creation and dependency shading |
+| **Bundling** | JDK `jpackage` | `25` | Native self-contained Windows executable bundling |
 
 ---
 
 ## 🏛️ Architecture & Engineering
 
-The application strictly enforces **Clean Architecture** (Ports and Adapters pattern), isolating core domain logic from any framework or persistence mechanism:
+The application strictly enforces **Clean Architecture** (Ports and Adapters pattern), isolating core domain rules from UI frameworks and persistence drivers:
 ```text
 com.black.bmitracker/
-├── 🌐 domain/
-│   ├── model/entity/               # Pure POJO business entities (UserProfile, MeasurementEntry)
-│   ├── model/enums/                # Invariant value objects (UnitSystem, BmiCategory)
-│   ├── service/                    # Pure domain logic (BmiCalculatorService, UnitConverterService)
-│   └── repository/                 # Domain repository interfaces / Ports (DIP abstraction)
-│
 ├── ⚙️ application/
-│   ├── dto/                        # Immutable data transfer records (BmiResultDto)
-│   └── service/                    # Application use-case coordinators (HealthTrackerService)
+│   ├── dto/
+│   │   └── BmiResultDto.java                     # Immutable DTO record for BMI computation outcomes
+│   └── service/
+│       └── HealthTrackerService.java             # Orchestrates use-cases & cross-cutting logic
 │
-├── 🗄️ infrastructure/
-│   └── persistence/
-│       ├── config/                 # Hibernate SessionFactory bootstrapping (HibernateUtil)
-│       └── repository/             # Concrete Hibernate repository adapters
+├── 🌐 domain/
+│   ├── exception/
+│   │   └── InvalidMeasurementException.java     # Domain-level invariant violations & bounds check
+│   ├── model/
+│   │   ├── entity/
+│   │   │   ├── MeasurementEntry.java             # Historical metric snapshot entity
+│   │   │   └── UserProfile.java                  # User demographic aggregate entity
+│   │   └── enums/
+│   │       ├── BmiCategory.java                  # Health classification thresholds (WHO/CDC)
+│   │       ├── Gender.java                       # Demographic biological profile constants
+│   │       └── UnitSystem.java                   # Metric / Imperial measurement unit descriptors
+│   ├── repository/                               # Domain Repository Ports (DIP Interfaces)
+│   │   ├── MeasurementEntryRepositoryPort.java
+│   │   └── UserProfileRepositoryPort.java
+│   └── service/                                  # Pure Domain Business Logic
+│       ├── BmiCalculatorService.java             # Exact mathematical formula calculation engine
+│       ├── BmiCategoryClassifier.java            # Diagnostic categorization rules
+│       └── UnitConverterService.java             # Precision bidirectional unit transformation
+│
+├── 🗄️ infrastructure.persistence/
+│   ├── config/
+│   │   └── HibernateUtil.java                    # SessionFactory lifecycle & ORM configuration
+│   └── repository/                               # Concrete Persistence Adapters
+│       ├── BaseRepository.java                   # Generic CRUD repository abstraction
+│       ├── AbstractHibernateRepository.java      # Template method base implementation
+│       ├── MeasurementEntryRepository.java       # Hibernate implementation of Measurement Port
+│       └── UserProfileRepository.java            # Hibernate implementation of UserProfile Port
 │
 └── 🖥️ ui/
-├── controller/                 # Presentation controllers
-└── view/                       # JavaFX application entrypoint (BmiTrackerApp) & views
+├── view/                                     # Presentation Components & Views
+│   ├── BmiGaugeView.java                     # Custom visual speedometer gauge
+│   ├── MainDashboardView.java                # Analytics dashboard, tables & trend charts
+│   └── ProfileSelectionView.java             # User onboarding & profile management screen
+├── BmiTrackerApp.java                        # JavaFX Application lifecycle manager
+└── Launcher.java                             # Modular-safe Fat JAR / Native EXE entrypoint

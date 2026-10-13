@@ -1,43 +1,75 @@
+# ==============================================================================
+# Build & Distribution Artifacts (Maven & jpackage)
+# ==============================================================================
 target/
+dist/
+jpackage-input/
+*.zip
+*.tar.gz
+*.exe
+*.jar
+!**/src/main/resources/**/*.jar
 !.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-.kotlin
 
+# ==============================================================================
+# Database & Runtime Data (H2 & Hibernate)
+# ==============================================================================
+db/
+*.mv.db
+*.trace.db
+
+# ==============================================================================
+# IDEs & Editors
+# ==============================================================================
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
-*.mv.db
-*.trace.db
-db/
-
+out/
 
 ### Eclipse ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
 
 ### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
 
 ### VS Code ###
 .vscode/
 
-### Mac OS ###
+# ==============================================================================
+# OS & Environment Specific Files
+# ==============================================================================
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+Desktop.ini
+
+### macOS ###
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+### Linux ###
+*~
+.directory
+
+# ==============================================================================
+# Logs & Temp Files
+# ==============================================================================
+*.log
+*.tmp
+*.bak
